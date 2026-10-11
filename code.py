@@ -16,7 +16,7 @@ MODELO = "gemini-2.5-flash-lite"  # leve = mais quota no plano gratuito
 
 NUMERO_WHATSAPP = "923030010"  # número para enviar o comprovativo
 NUMERO_EXPRESS = "923030010"  # número/IBAN para o pagamento Express
-PRECO = "DEFINA O PREÇO"  # ex.: "1.000 Kz"
+PRECO = "3.000 kz"  # ex.: "1.000 Kz"
 INDICATIVO = "244"  # Angola
 
 IDIOMAS = {
