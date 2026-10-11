@@ -12,11 +12,14 @@ except ImportError:
     genai = None
 
 # ----------------------------- Configuração -----------------------------
-MODELO = "gemini-2.5-flash-lite"  # leve = mais quota no plano gratuito
+# Modelo principal: pode ser mudado nos Secrets com a linha  MODELO = "nome"
+# Se falhar (404), o app tenta automaticamente os modelos de reserva.
+MODELO_PADRAO = "gemini-3.5-flash-lite"
+MODELOS_RESERVA = ["gemini-3.5-flash", "gemini-2.0-flash"]
 
 NUMERO_WHATSAPP = "923030010"  # número para enviar o comprovativo
-NUMERO_EXPRESS = "923030010"  # número/IBAN para o pagamento Express
-PRECO = "3.000 kz"  # ex.: "1.000 Kz"
+NUMERO_EXPRESS = "923030010"  # número para o pagamento Express
+PRECO = "3.000 Kz"
 INDICATIVO = "244"  # Angola
 
 IDIOMAS = {
@@ -125,31 +128,45 @@ def obter_cliente():
     return genai.Client(api_key=chave)
 
 
+def lista_de_modelos():
+    try:
+        principal = str(st.secrets["MODELO"]).strip()
+    except Exception:
+        principal = MODELO_PADRAO
+    modelos = [principal] + [m for m in MODELOS_RESERVA if m != principal]
+    return modelos
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def perguntar_ia(prompt):
-    """Chama o Gemini com retry (backoff) e cache para poupar quota."""
+    """Chama o Gemini com cache, retry (429) e modelos de reserva (404)."""
     cliente = obter_cliente()
     if cliente is None:
         return "⚠️ Chave GEMINI_API_KEY não configurada nos Secrets."
 
-    espera = 2
-    for tentativa in range(3):
-        try:
-            resp = cliente.models.generate_content(model=MODELO, contents=prompt)
-            return resp.text or "Sem resposta."
-        except Exception as e:
-            msg = str(e)
-            if "429" in msg or "quota" in msg.lower():
-                if tentativa < 2:
-                    time.sleep(espera)
-                    espera *= 2
-                    continue
-                return (
-                    "⚠️ Limite de uso da API atingido. "
-                    "Tente novamente daqui a alguns minutos."
-                )
-            return f"⚠️ Erro da API: {msg[:200]}"
-    return "⚠️ Não foi possível obter resposta."
+    ultimo_erro = ""
+    for modelo in lista_de_modelos():
+        espera = 2
+        for tentativa in range(3):
+            try:
+                resp = cliente.models.generate_content(model=modelo, contents=prompt)
+                return resp.text or "Sem resposta."
+            except Exception as e:
+                msg = str(e)
+                ultimo_erro = msg
+                if "429" in msg or "quota" in msg.lower():
+                    if tentativa < 2:
+                        time.sleep(espera)
+                        espera *= 2
+                        continue
+                    return (
+                        "⚠️ Limite de uso da API atingido. "
+                        "Tente novamente daqui a alguns minutos."
+                    )
+                if "404" in msg or "NOT_FOUND" in msg:
+                    break  # tenta o modelo seguinte
+                return f"⚠️ Erro da API: {msg[:200]}"
+    return f"⚠️ Nenhum modelo disponível. Último erro: {ultimo_erro[:200]}"
 
 
 # ------------------------------ Interface -------------------------------
