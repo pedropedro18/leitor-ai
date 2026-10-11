@@ -1,5 +1,7 @@
+import hmac
 import io
 import time
+from urllib.parse import quote
 
 import streamlit as st
 from gtts import gTTS
@@ -11,6 +13,11 @@ except ImportError:
 
 # ----------------------------- Configuração -----------------------------
 MODELO = "gemini-2.5-flash-lite"  # leve = mais quota no plano gratuito
+
+NUMERO_WHATSAPP = "923030010"  # número para enviar o comprovativo
+NUMERO_EXPRESS = "923030010"  # número/IBAN para o pagamento Express
+PRECO = "DEFINA O PREÇO"  # ex.: "1.000 Kz"
+INDICATIVO = "244"  # Angola
 
 IDIOMAS = {
     "English (US)": ("en", "com", "English"),
@@ -42,6 +49,62 @@ st.caption(
     "Leitura em voz alta e assistente de IA em inglês, português, francês, "
     "mandarim, coreano, afrikaans, swahili e turco"
 )
+
+if "acesso" not in st.session_state:
+    st.session_state.acesso = False
+if "pedir_pagamento" not in st.session_state:
+    st.session_state.pedir_pagamento = False
+
+
+# ------------------------------- Acesso ---------------------------------
+def codigos_validos():
+    try:
+        return [str(c).strip().upper() for c in st.secrets["CODIGOS_ACESSO"]]
+    except Exception:
+        return []
+
+
+def codigo_correto(digitado):
+    digitado = digitado.strip().upper()
+    return any(hmac.compare_digest(digitado, c) for c in codigos_validos())
+
+
+def painel_pagamento():
+    """Mostra as instruções de pagamento e o campo do código."""
+    st.warning("🔒 Para usar o leitor precisa de um código de acesso.")
+    st.markdown(
+        f"""
+*Como obter o código:*
+1. Faça o pagamento de *{PRECO}* por *Express* para *{NUMERO_EXPRESS}*.
+2. Envie o *comprovativo* pelo WhatsApp.
+3. Receberá o seu *código de acesso*. Cole-o abaixo.
+"""
+    )
+    msg = quote(
+        f"Olá! Fiz o pagamento de {PRECO} por Express para o Leitor multilíngue. "
+        "Segue o comprovativo. Podem enviar-me o código de acesso?"
+    )
+    st.link_button(
+        "📲 Enviar comprovativo no WhatsApp",
+        f"https://wa.me/{INDICATIVO}{NUMERO_WHATSAPP}?text={msg}",
+    )
+
+    codigo = st.text_input("Código de acesso", type="password", key="campo_codigo")
+    if st.button("Validar código"):
+        if codigo_correto(codigo):
+            st.session_state.acesso = True
+            st.session_state.pedir_pagamento = False
+            st.rerun()
+        else:
+            st.error("Código inválido. Confira e tente novamente.")
+
+
+def exigir_acesso():
+    """True se o utilizador já tem acesso; senão mostra o painel de pagamento."""
+    if st.session_state.acesso:
+        return True
+    st.session_state.pedir_pagamento = True
+    return False
 
 
 # ------------------------------- Funções --------------------------------
@@ -96,13 +159,15 @@ lang, tld, nome_idioma = IDIOMAS[idioma]
 texto = st.text_area("Texto", height=200, placeholder="Escreva ou cole o texto aqui...")
 lento = st.checkbox("Leitura lenta (bom para treino)")
 
-aba_ler, aba_ia = st.tabs(["🔊 Ler em voz alta", "🤖 Assistente IA"])
+aba_ler, aba_ia, aba_priv = st.tabs(
+    ["🔊 Ler em voz alta", "🤖 Assistente IA", "🔐 Privacidade"]
+)
 
 with aba_ler:
     if st.button("Ler em voz alta", type="primary"):
         if not texto.strip():
             st.warning("Escreva ou cole um texto primeiro.")
-        else:
+        elif exigir_acesso():
             try:
                 audio = gerar_audio(texto.strip(), lang, tld, lento)
                 st.audio(audio, format="audio/mp3")
@@ -131,7 +196,7 @@ with aba_ia:
             st.warning("Escreva ou cole um texto primeiro.")
         elif acao == "Fazer uma pergunta" and not pergunta.strip():
             st.warning("Escreva a sua pergunta.")
-        else:
+        elif exigir_acesso():
             if acao == "Explicar o texto":
                 prompt = (
                     f"Explica de forma simples o seguinte texto em {nome_idioma}. "
@@ -167,3 +232,32 @@ with aba_ia:
                     )
                 except Exception as e:
                     st.error(f"Erro no áudio: {e}")
+
+with aba_priv:
+    st.subheader("Política de privacidade")
+    st.markdown(
+        """
+*Que dados usamos*
+- O texto que escreve ou cola, apenas para gerar o áudio ou a resposta da IA.
+- O código de acesso, apenas para validar a sua entrada.
+
+*O que fazemos com eles*
+- *Não guardamos* os seus textos em nenhuma base de dados nem os usamos para outros fins.
+- *Não vendemos, não partilhamos e não cedemos* os seus dados a terceiros para publicidade ou qualquer outro fim.
+- O comprovativo de pagamento enviado pelo WhatsApp serve só para confirmar o pagamento e enviar o código.
+
+*Serviços técnicos necessários*
+Para funcionar, o texto é enviado de forma temporária aos serviços da Google que
+geram a voz (síntese de voz) e as respostas de IA (Gemini). Esses serviços
+processam o texto apenas para devolver o resultado, e têm as suas próprias
+políticas de privacidade.
+
+*Os seus direitos*
+Pode pedir esclarecimentos ou a eliminação do comprovativo enviado, contactando-nos pelo WhatsApp.
+"""
+    )
+
+# O painel de pagamento aparece quando o utilizador tenta usar sem código
+if st.session_state.pedir_pagamento and not st.session_state.acesso:
+    st.divider()
+    painel_pagamento()
