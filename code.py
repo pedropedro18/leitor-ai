@@ -28,29 +28,18 @@ IDIOMAS = {
     "Português (PT)": ("pt", "pt", "Português de Portugal"),
     "Português (BR)": ("pt", "com.br", "Português do Brasil"),
     "Français": ("fr", "fr", "Français"),
-    "中文 (Mandarim)": ("zh-CN", "com", "Mandarim (chinês simplificado)"),
-    "한국어 (Coreano)": ("ko", "com", "Coreano"),
-    "Afrikaans": ("af", "com", "Afrikaans"),
-    "Kiswahili (Swahili)": ("sw", "com", "Swahili"),
-    "Türkçe (Turco)": ("tr", "com", "Turco"),
 }
 
 DESTINOS = [
     "English",
     "Português",
     "Français",
-    "Mandarim (chinês simplificado)",
-    "Coreano",
-    "Afrikaans",
-    "Swahili",
-    "Turco",
 ]
 
 st.set_page_config(page_title="Leitor multilíngue", page_icon="🔊")
 st.title("🔊 Leitor multilíngue")
 st.caption(
-    "Leitura em voz alta e assistente de IA em inglês, português, francês, "
-    "mandarim, coreano, afrikaans, swahili e turco"
+    "Leitura em voz alta e assistente de IA em inglês, português e francês"
 )
 
 if "acesso" not in st.session_state:
@@ -77,10 +66,10 @@ def painel_pagamento():
     st.warning("🔒 Para usar o leitor precisa de um código de acesso.")
     st.markdown(
         f"""
-*Como obter o código:*
-1. Faça o pagamento de *{PRECO}* por *Express* para *{NUMERO_EXPRESS}*.
-2. Envie o *comprovativo* pelo WhatsApp.
-3. Receberá o seu *código de acesso*. Cole-o abaixo.
+Como obter o código:
+1. Faça o pagamento de {PRECO} por Express para {NUMERO_EXPRESS}.
+2. Envie o comprovativo pelo WhatsApp.
+3. Receberá o seu código de acesso. Cole-o abaixo.
 """
     )
     msg = quote(
@@ -254,22 +243,22 @@ with aba_priv:
     st.subheader("Política de privacidade")
     st.markdown(
         """
-*Que dados usamos*
+Que dados usamos
 - O texto que escreve ou cola, apenas para gerar o áudio ou a resposta da IA.
 - O código de acesso, apenas para validar a sua entrada.
 
-*O que fazemos com eles*
-- *Não guardamos* os seus textos em nenhuma base de dados nem os usamos para outros fins.
-- *Não vendemos, não partilhamos e não cedemos* os seus dados a terceiros para publicidade ou qualquer outro fim.
+O que fazemos com eles
+- Não guardamos os seus textos em nenhuma base de dados nem os usamos para outros fins.
+- Não vendemos, não partilhamos e não cedemos os seus dados a terceiros para publicidade ou qualquer outro fim.
 - O comprovativo de pagamento enviado pelo WhatsApp serve só para confirmar o pagamento e enviar o código.
 
-*Serviços técnicos necessários*
+Serviços técnicos necessários
 Para funcionar, o texto é enviado de forma temporária aos serviços da Google que
 geram a voz (síntese de voz) e as respostas de IA (Gemini). Esses serviços
 processam o texto apenas para devolver o resultado, e têm as suas próprias
 políticas de privacidade.
 
-*Os seus direitos*
+Os seus direitos
 Pode pedir esclarecimentos ou a eliminação do comprovativo enviado, contactando-nos pelo WhatsApp.
 """
     )
